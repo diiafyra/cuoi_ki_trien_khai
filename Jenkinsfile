@@ -13,8 +13,11 @@ pipeline {
 
         stage('Code Scan - SonarQube') {
             steps {
-                withSonarQubeEnv('SonarQube_sv') {
-                    sh './mvnw sonar:sonar'
+                dir('backend') {
+
+                    withSonarQubeEnv('SonarQube_sv') {
+                        sh './mvnw sonar:sonar'
+                    }
                 }
             }
         }

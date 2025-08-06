@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Register</title>
+    <link rel="stylesheet" href="../css/base.css" />
+    <link rel="stylesheet" href="../css/auth.css" />
+  </head>
+  <body>
+    <div class="auth-container">
+      <h1>Register</h1>
+      <form id="registerForm">
+        <input type="text" placeholder="Name" name="name" required />
+        <input type="email" placeholder="Email" name="email" required />
+        <input
+          type="password"
+          placeholder="Password"
+          name="password"
+          required
+        />
+        <button type="submit">Register</button>
+      </form>
+      <div class="google-login">
+        <button id="googleSignInBtn" class="google-btn">
+          <img src="../assets/google-icon.svg" alt="Google" />
+        </button>
+      </div>
+
+      <p>Already have an account? <a href="login.html">Login here</a></p>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/auth.js"></script>
+    <script type="module" src="../js/firebase.js"></script>
+  </body>
+</html>

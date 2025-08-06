@@ -8,7 +8,7 @@ pipeline {
         IMAGE_BACKEND = "${REGISTRY_USERNAME}/cuoiki-backend"
         IMAGE_FRONTEND = "${REGISTRY_USERNAME}/cuoiki-frontend"
     }
-1
+
     stages {
 
         stage('Code Scan - SonarQube') {

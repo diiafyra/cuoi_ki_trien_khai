@@ -33,7 +33,7 @@ services:
       - "8000:80"
     depends_on:
       - backend
-  
+
   prometheus:
     image: prom/prometheus
     container_name: prometheus
@@ -59,5 +59,18 @@ services:
       - "9100:9100"
     restart: always
 
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    ports:
+      - "7072:8080"
+      - "50001:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock  # ⚠️ Mount Docker socket để Jenkins chạy được Docker bên trong
+    restart: always
+    privileged: true
+
 volumes:
   db_data:
+  jenkins_home:

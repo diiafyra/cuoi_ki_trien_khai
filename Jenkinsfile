@@ -13,7 +13,7 @@ pipeline {
 
         stage('Code Scan - SonarQube') {
             steps {
-                withSonarQubeEnv('SonarQube_scanner') {
+                withSonarQubeEnv('SonarQube_sv') {
                     sh './mvnw sonar:sonar'
                 }
             }

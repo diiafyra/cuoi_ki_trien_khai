@@ -1,5 +1,10 @@
 pipeline {
-    agent any
+agent {
+    docker {
+      image 'docker:20.10.24'
+      args '-v /var/run/docker.sock:/var/run/docker.sock'
+    }
+  }
 
     environment {
         REGISTRY_CREDENTIALS = credentials('dockerhub-cred')  // cấu hình Jenkins credentials trước

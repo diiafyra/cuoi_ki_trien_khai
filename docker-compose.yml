@@ -34,6 +34,15 @@ services:
     depends_on:
       - backend
 
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter
+    ports:
+      - "9113:9113"
+    depends_on:
+      - frontend
+    command:
+      - '-nginx.scrape-uri=http://frontend/nginx_status'
+
   prometheus:
     image: prom/prometheus
     container_name: prometheus
@@ -59,18 +68,34 @@ services:
       - "9100:9100"
     restart: always
 
-  jenkins:
-    image: jenkins/jenkins:lts
-    container_name: jenkins
-    ports:
-      - "7072:8080"
-      - "50001:50000"
+  sonar-db:
+    image: postgres:12
+    container_name: sonar-db
+    environment:
+      POSTGRES_USER: sonar
+      POSTGRES_PASSWORD: sonar
+      POSTGRES_DB: sonarqube
     volumes:
-      - jenkins_home:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock  # ⚠️ Mount Docker socket để Jenkins chạy được Docker bên trong
-    restart: always
-    privileged: true
+      - sonar_db_data:/var/lib/postgresql/data
+
+  sonarqube:
+    image: sonarqube:lts
+    container_name: sonarqube-7072
+    ports:
+      - "9000:9000"
+    environment:
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+      - SONAR_JDBC_USERNAME=sonar
+      - SONAR_JDBC_PASSWORD=sonar
+      - SONAR_JDBC_URL=jdbc:postgresql://sonar-db:5432/sonarqube
+    depends_on:
+      - sonar-db
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
 
 volumes:
   db_data:
-  jenkins_home:
+  sonar_db_data:
+  sonarqube_data:
+  sonarqube_extensions:

@@ -8,29 +8,48 @@ pipeline {
 
         IMAGE_BACKEND = "${REGISTRY_USERNAME}/cuoiki-backend"
         IMAGE_FRONTEND = "${REGISTRY_USERNAME}/cuoiki-frontend"
+        COMPOSE_PROJECT_NAME = 'cuoiki'
     }
 
     stages {
-        stage('Start Services') {
+
+        stage('🧹 Cleanup Conflicting Containers') {
             steps {
-                echo '🟡 Starting supporting services (db, sonarqube, prometheus, grafana)...'
-                sh 'docker compose up -d db sonarqube prometheus grafana'
-                sh 'sleep 30' // đợi cho các dịch vụ khởi động ổn định
+                echo '🧹 Cleaning up possibly conflicting containers...'
+                sh '''
+                    docker rm -f sonarqube || true
+                    docker rm -f sonar_db || true
+                    docker rm -f db || true
+                    docker rm -f backend || true
+                    docker rm -f frontend || true
+                    docker rm -f prometheus || true
+                    docker rm -f grafana || true
+                '''
             }
         }
 
-        stage('Code Scan - SonarQube') {
+        stage('Start Supporting Services') {
             steps {
-                echo '🔍 Running SonarQube Scan...'
+                echo '🟡 Starting supporting services (db, sonarqube, prometheus, grafana)...'
+                sh 'docker compose down --remove-orphans || true'
+                sh 'docker compose up -d db sonarqube prometheus grafana'
+                sh 'sleep 30' // đợi dịch vụ ổn định
+                sh 'docker network connect shared-network jenkins-7072 || true'
+            }
+        }
+
+        stage('🔍 Run SonarQube Code Scan') {
+            steps {
+                echo '🔍 Running SonarQube scan...'
                 dir('backend') {
                     withSonarQubeEnv('SonarQube_sv') {
-                        sh './mvnw clean verify sonar:sonar -Dsonar.projectKey=cuoiki-backend'
+                        sh 'mvn clean verify sonar:sonar -Dsonar.projectKey=cuoiki-backend'
                     }
                 }
             }
         }
 
-        stage('Build and Push Docker Images') {
+        stage('🐳 Build and Push Docker Images') {
             steps {
                 echo '🐳 Building and pushing Docker images...'
                 script {
@@ -44,24 +63,26 @@ pipeline {
             }
         }
 
-        stage('Deploy All Services') {
+        stage('🚀 Deploy Entire Stack') {
             steps {
-                echo '🚀 Deploying entire stack with Docker Compose...'
-                sh 'docker compose down'
-                sh 'docker compose pull'
-                sh 'docker compose up -d --build'
+                echo '🚀 Rebuilding and starting all containers except Jenkins...'
+                sh 'docker compose -p ${COMPOSE_PROJECT_NAME} down'
+                sh 'docker compose -p ${COMPOSE_PROJECT_NAME} pull'
+                sh 'docker compose -p ${COMPOSE_PROJECT_NAME} up -d --build db sonar_db sonarqube prometheus grafana backend frontend'
             }
         }
     }
 
-  post {
-    always {
-      sh 'docker image prune -f'
+    post {
+        always {
+            echo '🧹 Cleaning up unused Docker images...'
+            sh 'docker image prune -f'
+        }
+
+        failure {
+            mail to: 'quynhtrang.a3.w@gmail.com',
+                subject: "❌ Jenkins Job Failed: ${env.JOB_NAME} [${env.BUILD_NUMBER}]",
+                body: "🔗 See details: ${env.BUILD_URL}"
+        }
     }
-    failure {
-      mail to: 'quynhtrang.a3.w@gmail.com',
-           subject: "❌ Jenkins Job Failed: ${env.JOB_NAME} [${env.BUILD_NUMBER}]",
-           body: "🔗 Details: ${env.BUILD_URL}"
-    }
-  }
 }

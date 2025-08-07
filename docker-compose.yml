@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # ======================= Application Backend =======================
   backend:
     container_name: backend
     build:
@@ -17,7 +16,6 @@ services:
     networks:
       - app-network
 
-  # ======================= Application Frontend =======================
   frontend:
     container_name: frontend
     build:
@@ -29,7 +27,6 @@ services:
     networks:
       - app-network
 
-  # ======================= PostgreSQL Database =======================
   db:
     container_name: db
     image: postgres:15
@@ -45,23 +42,6 @@ services:
     networks:
       - app-network
 
-  # ======================= Jenkins =======================
-  jenkins:
-    container_name: jenkins
-    build:
-      context: ./jenkins
-    ports:
-      - "7072:8080"
-      - "50000:50000"
-    volumes:
-      - jenkins_home:/var/jenkins_home
-      - ~/.m2:/var/jenkins_home/.m2
-    depends_on:
-      - sonarqube
-    networks:
-      - app-network
-
-  # ======================= SonarQube =======================
   sonarqube:
     container_name: sonarqube
     image: sonarqube:lts
@@ -92,7 +72,6 @@ services:
     networks:
       - app-network
 
-  # ======================= Prometheus =======================
   prometheus:
     container_name: prometheus
     image: prom/prometheus
@@ -103,7 +82,6 @@ services:
     networks:
       - app-network
 
-  # ======================= Grafana =======================
   grafana:
     container_name: grafana
     image: grafana/grafana
@@ -112,7 +90,24 @@ services:
     networks:
       - app-network
 
-# ======================= Volumes =======================
+  node-exporter:
+    container_name: node-exporter
+    image: prom/node-exporter
+    ports:
+      - "9100:9100"
+    networks:
+      - app-network
+
+  nginx-exporter:
+    container_name: nginx-exporter
+    image: nginx/nginx-prometheus-exporter
+    ports:
+      - "9113:9113"
+    command:
+      - '-nginx.scrape-uri=http://localhost/status' # chỉnh lại nếu có nginx thật
+    networks:
+      - app-network
+
 volumes:
   db_data:
   jenkins_home:
@@ -120,7 +115,6 @@ volumes:
   sonarqube_extensions:
   sonar_db_data:
 
-# ======================= Networks =======================
 networks:
   app-network:
     driver: bridge

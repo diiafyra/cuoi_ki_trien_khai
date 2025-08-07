@@ -35,9 +35,7 @@ pipeline {
                     steps {
                         dir('backend') {
                             sh 'mvn clean package -DskipTests'
-                            sh """
-                                docker build -t ${IMAGE_BACKEND}:latest .
-                            """
+                            sh "docker build -t ${IMAGE_BACKEND}:latest ."
                         }
                     }
                 }
@@ -64,27 +62,22 @@ pipeline {
             }
         }
 
-stage('Deploy with Docker Compose') {
-    steps {
-        sh '''
-            echo "🧹 Stopping and removing old container 'node-exporter' if it exists..."
-            docker rm -f node-exporter || true
+        stage('Deploy with Docker Compose') {
+            steps {
+                sh '''
+                    echo "🧹 Stopping old app containers (if any)..."
+                    docker compose -f docker-compose.app.yml down || true
 
-            echo "⬇️ Stopping old containers (if any)..."
-            docker compose down || true
-
-            echo "🚀 Starting services with Docker Compose..."
-            docker compose up -d --build --remove-orphans
-        '''
-    }
-}
-
-
+                    echo "🚀 Starting app with Docker Compose..."
+                    docker compose -f docker-compose.app.yml up -d
+                '''
+            }
+        }
     }
 
     post {
         always {
-            echo 'Cleaning up dangling Docker images...'
+            echo '🧼 Cleaning up dangling Docker images...'
             sh 'docker image prune -f'
         }
         failure {

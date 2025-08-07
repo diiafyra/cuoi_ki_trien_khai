@@ -1,47 +1,12 @@
 version: '3.8'
 
 services:
-  db:
-    image: postgres:latest
-    environment:
-      POSTGRES_USER: trienkhai
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: moodsic
+  node-exporter:
+    image: prom/node-exporter
+    container_name: node-exporter
     ports:
-      - "5433:5432"
-    volumes:
-      - db_data:/var/lib/postgresql/data
-
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    ports:
-      - "8080:8080"
-    depends_on:
-      - db
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/moodsic
-      SPRING_DATASOURCE_USERNAME: trienkhai
-      SPRING_DATASOURCE_PASSWORD: password
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "8000:80"
-    depends_on:
-      - backend
-
-  nginx-exporter:
-    image: nginx/nginx-prometheus-exporter
-    ports:
-      - "9113:9113"
-    depends_on:
-      - frontend
-    command:
-      - '-nginx.scrape-uri=http://frontend/nginx_status'
+      - "9100:9100"
+    restart: always
 
   prometheus:
     image: prom/prometheus
@@ -62,13 +27,6 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - grafana_data:/var/lib/grafana
-    restart: always
-
-  node-exporter:
-    image: prom/node-exporter
-    container_name: node-exporter
-    ports:
-      - "9100:9100"
     restart: always
 
   sonar-db:
@@ -98,7 +56,6 @@ services:
       - sonarqube_extensions:/opt/sonarqube/extensions
 
 volumes:
-  db_data:
   sonar_db_data:
   sonarqube_data:
   sonarqube_extensions:

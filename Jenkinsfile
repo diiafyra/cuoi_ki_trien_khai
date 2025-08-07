@@ -66,13 +66,19 @@ pipeline {
 
 stage('Deploy with Docker Compose') {
     steps {
-sh '''
-  docker compose down || true
-  docker compose up -d --build --remove-orphans
-'''
+        sh '''
+            echo "🧹 Stopping and removing old container 'node-exporter' if it exists..."
+            docker rm -f node-exporter || true
 
+            echo "⬇️ Stopping old containers (if any)..."
+            docker compose down || true
+
+            echo "🚀 Starting services with Docker Compose..."
+            docker compose up -d --build --remove-orphans
+        '''
     }
 }
+
 
     }
 

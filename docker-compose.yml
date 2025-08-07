@@ -2,7 +2,6 @@ version: '3.8'
 
 services:
   backend:
-    container_name: backend
     build:
       context: ./backend
     ports:
@@ -17,7 +16,6 @@ services:
       - app-network
 
   frontend:
-    container_name: frontend
     build:
       context: ./frontend
     ports:
@@ -28,7 +26,6 @@ services:
       - app-network
 
   db:
-    container_name: db
     image: postgres:15
     restart: always
     environment:
@@ -43,7 +40,6 @@ services:
       - app-network
 
   sonarqube:
-    container_name: sonarqube
     image: sonarqube:lts
     ports:
       - "9000:9000"
@@ -53,14 +49,13 @@ services:
       SONAR_JDBC_PASSWORD: sonar
     depends_on:
       - sonar_db
-    networks:
-      - app-network
     volumes:
       - sonarqube_data:/opt/sonarqube/data
       - sonarqube_extensions:/opt/sonarqube/extensions
+    networks:
+      - app-network
 
   sonar_db:
-    container_name: sonar_db
     image: postgres:15
     restart: always
     environment:
@@ -73,17 +68,15 @@ services:
       - app-network
 
   prometheus:
-    container_name: prometheus
     image: prom/prometheus
     ports:
       - "9090:9090"
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     networks:
       - app-network
 
   grafana:
-    container_name: grafana
     image: grafana/grafana
     ports:
       - "3001:3000"
@@ -91,7 +84,6 @@ services:
       - app-network
 
   node-exporter:
-    container_name: node-exporter
     image: prom/node-exporter
     ports:
       - "9100:9100"
@@ -99,12 +91,11 @@ services:
       - app-network
 
   nginx-exporter:
-    container_name: nginx-exporter
     image: nginx/nginx-prometheus-exporter
     ports:
       - "9113:9113"
     command:
-      - '-nginx.scrape-uri=http://localhost/status' # chỉnh lại nếu có nginx thật
+      - '-nginx.scrape-uri=http://localhost/status'
     networks:
       - app-network
 

@@ -9,32 +9,38 @@ pipeline {
         IMAGE_BACKEND = "${REGISTRY_USERNAME}/cuoiki-backend"
         IMAGE_FRONTEND = "${REGISTRY_USERNAME}/cuoiki-frontend"
         COMPOSE_PROJECT_NAME = 'cuoiki'
+        DOCKER_NETWORK = 'app-network'
     }
 
     stages {
 
         stage('🧹 Cleanup Conflicting Containers') {
             steps {
-                echo '🧹 Cleaning up possibly conflicting containers...'
+                echo '🧹 Removing containers except Jenkins itself...'
                 sh '''
-                    docker rm -f sonarqube || true
-                    docker rm -f sonar_db || true
-                    docker rm -f db || true
-                    docker rm -f backend || true
-                    docker rm -f frontend || true
-                    docker rm -f prometheus || true
-                    docker rm -f grafana || true
+                    docker ps -a --format "{{.ID}} {{.Names}}" | grep -v jenkins-7072 | awk '{print $1}' | xargs -r docker rm -f || true
                 '''
             }
         }
 
-        stage('Start Supporting Services') {
+        stage('🔧 Ensure Network Exists') {
+            steps {
+                echo '🔧 Ensuring app-network exists...'
+                sh '''
+                    docker network inspect ${DOCKER_NETWORK} >/dev/null 2>&1 || docker network create ${DOCKER_NETWORK}
+                '''
+            }
+        }
+
+        stage('🟡 Start Supporting Services') {
             steps {
                 echo '🟡 Starting supporting services (db, sonarqube, prometheus, grafana)...'
-                sh 'docker compose down --remove-orphans || true'
-                sh 'docker compose up -d db sonarqube prometheus grafana'
-                sh 'sleep 30' // đợi dịch vụ ổn định
-                sh 'docker network connect app-network jenkins-7072 || true'
+                sh '''
+                    docker compose -p ${COMPOSE_PROJECT_NAME} down --remove-orphans || true
+                    docker compose -p ${COMPOSE_PROJECT_NAME} up -d db sonar_db sonarqube prometheus grafana
+                    sleep 30
+                    docker network connect ${DOCKER_NETWORK} jenkins-7072 || true
+                '''
             }
         }
 
@@ -66,9 +72,12 @@ pipeline {
         stage('🚀 Deploy Entire Stack') {
             steps {
                 echo '🚀 Rebuilding and starting all containers except Jenkins...'
-                sh 'docker compose -p ${COMPOSE_PROJECT_NAME} down'
-                sh 'docker compose -p ${COMPOSE_PROJECT_NAME} pull'
-                sh 'docker compose -p ${COMPOSE_PROJECT_NAME} up -d --build db sonar_db sonarqube prometheus grafana backend frontend'
+                sh '''
+                    docker compose -p ${COMPOSE_PROJECT_NAME} down
+                    docker compose -p ${COMPOSE_PROJECT_NAME} pull
+                    docker compose -p ${COMPOSE_PROJECT_NAME} up -d --build db sonar_db sonarqube prometheus grafana backend frontend
+                    docker network connect ${DOCKER_NETWORK} jenkins-7072 || true
+                '''
             }
         }
     }

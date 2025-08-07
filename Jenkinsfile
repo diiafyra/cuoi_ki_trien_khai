@@ -5,6 +5,7 @@ pipeline {
         REGISTRY_CREDENTIALS = credentials('dockerhub-cred')
         REGISTRY_URL = 'docker.io'
         REGISTRY_USERNAME = 'afyra'
+
         IMAGE_BACKEND = "${REGISTRY_USERNAME}/cuoiki-backend"
         IMAGE_FRONTEND = "${REGISTRY_USERNAME}/cuoiki-frontend"
     }
@@ -14,7 +15,6 @@ pipeline {
             steps {
                 dir('backend') {
                     withSonarQubeEnv('SonarQube_sv') {
-                        // ✅ Dùng mvn thay vì ./mvnw nếu Jenkins đã có Maven
                         sh 'mvn sonar:sonar'
                     }
                 }
@@ -29,29 +29,37 @@ pipeline {
             }
         }
 
-        stage('Build Backend') {
-            steps {
-                dir('backend') {
-                    // ✅ Dùng Maven hệ thống (nhanh hơn) + cache từ volume
-                    sh 'mvn clean package -DskipTests'
-                    sh "docker build -t ${IMAGE_BACKEND}:latest ."
+        stage('Build & Tag Docker Images') {
+            parallel {
+                stage('Backend') {
+                    steps {
+                        dir('backend') {
+                            sh 'mvn clean package -DskipTests'
+                            sh """
+                                docker build -t ${IMAGE_BACKEND}:latest .
+                            """
+                        }
+                    }
                 }
-            }
-        }
-
-        stage('Build Frontend') {
-            steps {
-                dir('frontend') {
-                    sh "docker build -t ${IMAGE_FRONTEND}:latest ."
+                stage('Frontend') {
+                    steps {
+                        dir('frontend') {
+                            sh "docker build -t ${IMAGE_FRONTEND}:latest ."
+                        }
+                    }
                 }
             }
         }
 
         stage('Push Docker Images') {
             steps {
-                withDockerRegistry([ credentialsId: 'dockerhub-cred', url: 'https://index.docker.io/v1/' ]) {
-                    sh "docker push ${IMAGE_BACKEND}:latest"
-                    sh "docker push ${IMAGE_FRONTEND}:latest"
+                withDockerRegistry([credentialsId: 'dockerhub-cred', url: 'https://index.docker.io/v1/']) {
+                    script {
+                        def images = [IMAGE_BACKEND, IMAGE_FRONTEND]
+                        for (img in images) {
+                            sh "docker push ${img}:latest"
+                        }
+                    }
                 }
             }
         }
@@ -68,7 +76,7 @@ pipeline {
 
     post {
         always {
-            echo 'Cleaning up dangling images...'
+            echo 'Cleaning up dangling Docker images...'
             sh 'docker image prune -f'
         }
         failure {

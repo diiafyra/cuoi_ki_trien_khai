@@ -9,7 +9,7 @@ pipeline {
         IMAGE_BACKEND = "${REGISTRY_USERNAME}/cuoiki-backend"
         IMAGE_FRONTEND = "${REGISTRY_USERNAME}/cuoiki-frontend"
         COMPOSE_PROJECT_NAME = 'cuoiki'
-        DOCKER_NETWORK = 'app-network'
+        DOCKER_NETWORK = 'cuoiki_app-network'
     }
 
     stages {

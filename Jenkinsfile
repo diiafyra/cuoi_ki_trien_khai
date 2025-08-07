@@ -34,7 +34,7 @@ pipeline {
                 sh 'docker compose down --remove-orphans || true'
                 sh 'docker compose up -d db sonarqube prometheus grafana'
                 sh 'sleep 30' // đợi dịch vụ ổn định
-                sh 'docker network connect shared-network jenkins-7072 || true'
+                sh 'docker network connect app-network jenkins-7072 || true'
             }
         }
 

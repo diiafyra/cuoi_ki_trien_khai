@@ -58,7 +58,7 @@ pipeline {
             steps {
                 echo '🐳 Building and pushing Docker images...'
                 script {
-                    docker.withRegistry("${REGISTRY_URL}", "${REGISTRY_CREDENTIALS}") {
+                    docker.withRegistry("${REGISTRY_URL}", 'dockerhub-cred') {
                         sh "docker build -t ${IMAGE_BACKEND} ./backend"
                         sh "docker build -t ${IMAGE_FRONTEND} ./frontend"
                         sh "docker push ${IMAGE_BACKEND}"

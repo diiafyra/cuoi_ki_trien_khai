@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        REGISTRY_CREDENTIALS = credentials('dockerhub-cred')  // ✔️ Dùng đúng tên credentials
+        REGISTRY_CREDENTIALS = credentials('dockerhub-cred')
         REGISTRY_URL = 'docker.io'
         REGISTRY_USERNAME = 'afyra'
         IMAGE_BACKEND = "${REGISTRY_USERNAME}/cuoiki-backend"
@@ -10,12 +10,12 @@ pipeline {
     }
 
     stages {
-
         stage('Code Scan - SonarQube') {
             steps {
                 dir('backend') {
                     withSonarQubeEnv('SonarQube_sv') {
-                        sh './mvnw sonar:sonar'
+                        // ✅ Dùng mvn thay vì ./mvnw nếu Jenkins đã có Maven
+                        sh 'mvn sonar:sonar'
                     }
                 }
             }
@@ -32,7 +32,8 @@ pipeline {
         stage('Build Backend') {
             steps {
                 dir('backend') {
-                    sh './mvnw clean package -DskipTests'
+                    // ✅ Dùng Maven hệ thống (nhanh hơn) + cache từ volume
+                    sh 'mvn clean package -DskipTests'
                     sh "docker build -t ${IMAGE_BACKEND}:latest ."
                 }
             }

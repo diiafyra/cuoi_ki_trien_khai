@@ -1,0 +1,39 @@
+FROM jenkins/jenkins:lts
+
+USER root
+
+# Cài công cụ hệ thống và tiện ích
+RUN apt-get update && apt-get install -y \
+    curl \
+    gnupg \
+    lsb-release \
+    git \
+    maven \
+    sudo \
+    unzip \
+    nano \
+    apt-transport-https \
+    ca-certificates \
+    software-properties-common \
+    docker.io && \
+    rm -rf /var/lib/apt/lists/*
+
+# Cài Docker Compose v2
+RUN mkdir -p /usr/local/lib/docker/cli-plugins && \
+    curl -SL "https://github.com/docker/compose/releases/download/v2.27.0/docker-compose-linux-x86_64" \
+    -o /usr/local/lib/docker/cli-plugins/docker-compose && \
+    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+# Cài Node.js 20 và serve
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get update && apt-get install -y nodejs && \
+    npm install -g serve && \
+    rm -rf /var/lib/apt/lists/*
+
+# Thêm user Jenkins vào group docker
+RUN usermod -aG docker jenkins
+
+# Làm sạch hệ thống (optional)
+RUN apt-get clean
+
+USER jenkins

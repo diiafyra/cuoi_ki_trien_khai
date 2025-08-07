@@ -1,3 +1,4 @@
+# file: prometheus.yml
 global:
   scrape_interval: 15s
 
@@ -10,11 +11,12 @@ scrape_configs:
     static_configs:
       - targets: ['node-exporter:9100']
 
+  - job_name: 'nginx-exporter'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['nginx-exporter:9113']
+
   - job_name: 'backend-app'
     metrics_path: /actuator/prometheus
     static_configs:
       - targets: ['backend:8080']
-
-  - job_name: 'nginx'
-    static_configs:
-      - targets: ['nginx-exporter:9113']

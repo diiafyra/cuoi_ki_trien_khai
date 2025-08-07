@@ -11,79 +11,57 @@ pipeline {
     }
 
     stages {
+        stage('Start Services') {
+            steps {
+                echo '🟡 Starting supporting services (db, sonarqube, prometheus, grafana)...'
+                sh 'docker compose up -d db sonarqube prometheus grafana'
+                sh 'sleep 30' // đợi cho các dịch vụ khởi động ổn định
+            }
+        }
+
         stage('Code Scan - SonarQube') {
             steps {
+                echo '🔍 Running SonarQube Scan...'
                 dir('backend') {
                     withSonarQubeEnv('SonarQube_sv') {
-                        sh 'mvn sonar:sonar'
+                        sh './mvnw clean verify sonar:sonar -Dsonar.projectKey=cuoiki-backend'
                     }
                 }
             }
         }
 
-        stage('Quality Gate') {
+        stage('Build and Push Docker Images') {
             steps {
-                timeout(time: 1, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        }
-
-        stage('Build & Tag Docker Images') {
-            parallel {
-                stage('Backend') {
-                    steps {
-                        dir('backend') {
-                            sh 'mvn clean package -DskipTests'
-                            sh "docker build -t ${IMAGE_BACKEND}:latest ."
-                        }
-                    }
-                }
-                stage('Frontend') {
-                    steps {
-                        dir('frontend') {
-                            sh "docker build -t ${IMAGE_FRONTEND}:latest ."
-                        }
+                echo '🐳 Building and pushing Docker images...'
+                script {
+                    docker.withRegistry("https://${REGISTRY_URL}", 'dockerhub-cred') {
+                        sh 'docker build -t ${IMAGE_BACKEND} ./backend'
+                        sh 'docker build -t ${IMAGE_FRONTEND} ./frontend'
+                        sh 'docker push ${IMAGE_BACKEND}'
+                        sh 'docker push ${IMAGE_FRONTEND}'
                     }
                 }
             }
         }
 
-        stage('Push Docker Images') {
+        stage('Deploy All Services') {
             steps {
-                withDockerRegistry([credentialsId: 'dockerhub-cred', url: 'https://index.docker.io/v1/']) {
-                    script {
-                        def images = [IMAGE_BACKEND, IMAGE_FRONTEND]
-                        for (img in images) {
-                            sh "docker push ${img}:latest"
-                        }
-                    }
-                }
-            }
-        }
-
-        stage('Deploy with Docker Compose') {
-            steps {
-                sh '''
-                    echo "🧹 Stopping old app containers (if any)..."
-                    docker compose -f docker-compose.app.yml down || true
-
-                    echo "🚀 Starting app with Docker Compose..."
-                    docker compose -f docker-compose.app.yml up -d
-                '''
+                echo '🚀 Deploying entire stack with Docker Compose...'
+                sh 'docker compose down'
+                sh 'docker compose pull'
+                sh 'docker compose up -d --build'
             }
         }
     }
 
-    post {
-        always {
-            echo '🧼 Cleaning up dangling Docker images...'
-            sh 'docker image prune -f'
-        }
-        failure {
-            mail to: 'quynhtrang.a3.w@gmail.com',
-                 subject: "Jenkins Job Failed: ${env.JOB_NAME} [${env.BUILD_NUMBER}]",
-                 body: "Check Jenkins for details: ${env.BUILD_URL}"
-        }
+  post {
+    always {
+      sh 'docker image prune -f'
     }
+    failure {
+      mail to: 'quynhtrang.a3.w@gmail.com',
+           subject: "❌ Jenkins Job Failed: ${env.JOB_NAME} [${env.BUILD_NUMBER}]",
+           body: "🔗 Details: ${env.BUILD_URL}"
+    }
+  }
 }

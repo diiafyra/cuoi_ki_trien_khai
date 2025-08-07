@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        REGISTRY_CREDENTIALS = credentials('dockerhub-cred')  // cấu hình Jenkins credentials trước
+        REGISTRY_CREDENTIALS = credentials('dockerhub-cred')  // ✔️ Dùng đúng tên credentials
         REGISTRY_URL = 'docker.io'
         REGISTRY_USERNAME = 'afyra'
         IMAGE_BACKEND = "${REGISTRY_USERNAME}/cuoiki-backend"
@@ -14,10 +14,17 @@ pipeline {
         stage('Code Scan - SonarQube') {
             steps {
                 dir('backend') {
-
                     withSonarQubeEnv('SonarQube_sv') {
                         sh './mvnw sonar:sonar'
                     }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 1, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
                 }
             }
         }
@@ -26,7 +33,7 @@ pipeline {
             steps {
                 dir('backend') {
                     sh './mvnw clean package -DskipTests'
-                    sh 'docker build -t $IMAGE_BACKEND:latest .'
+                    sh "docker build -t ${IMAGE_BACKEND}:latest ."
                 }
             }
         }
@@ -34,16 +41,16 @@ pipeline {
         stage('Build Frontend') {
             steps {
                 dir('frontend') {
-                    sh 'docker build -t $IMAGE_FRONTEND:latest .'
+                    sh "docker build -t ${IMAGE_FRONTEND}:latest ."
                 }
             }
         }
 
         stage('Push Docker Images') {
             steps {
-                withDockerRegistry([ credentialsId: 'dockerhub-credentials', url: '' ]) {
-                    sh 'docker push $IMAGE_BACKEND:latest'
-                    sh 'docker push $IMAGE_FRONTEND:latest'
+                withDockerRegistry([ credentialsId: 'dockerhub-cred', url: 'https://index.docker.io/v1/' ]) {
+                    sh "docker push ${IMAGE_BACKEND}:latest"
+                    sh "docker push ${IMAGE_FRONTEND}:latest"
                 }
             }
         }
@@ -56,7 +63,6 @@ pipeline {
                 '''
             }
         }
-
     }
 
     post {
